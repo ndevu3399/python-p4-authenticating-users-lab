@@ -79,3 +79,14 @@ api.add_resource(ShowArticle, '/articles/<int:id>')
 # ----------------------------
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
+class CheckSession(Resource):
+    def get(self):
+        user_id = session.get("user_id")
+
+        if not user_id:
+            return {}, 401
+
+        user = User.query.get(user_id)
+        if user:
+            return user.to_dict(), 200
+        return {}, 401
