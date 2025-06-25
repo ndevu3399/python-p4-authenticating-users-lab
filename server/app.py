@@ -35,50 +35,16 @@ class Login(Resource):
         return user.to_dict(), 200
 
 # ----------------------------
-# Resource: Clear Session
+# Resource: Logout
 # ----------------------------
-class ClearSession(Resource):
+class Logout(Resource):
     def delete(self):
-        session['page_views'] = None
-        session['user_id'] = None
+        session["user_id"] = None
         return {}, 204
 
 # ----------------------------
-# Resource: Index Article
+# Resource: Check Session
 # ----------------------------
-class IndexArticle(Resource):
-    def get(self):
-        articles = [article.to_dict() for article in Article.query.all()]
-        return articles, 200
-
-# ----------------------------
-# Resource: Show Article
-# ----------------------------
-class ShowArticle(Resource):
-    def get(self, id):
-        session['page_views'] = 0 if not session.get('page_views') else session.get('page_views')
-        session['page_views'] += 1
-
-        if session['page_views'] <= 3:
-            article = Article.query.filter(Article.id == id).first()
-            article_json = jsonify(article.to_dict())
-            return make_response(article_json, 200)
-
-        return {'message': 'Maximum pageview limit reached'}, 401
-
-# ----------------------------
-# Register routes
-# ----------------------------
-api.add_resource(Login, '/login')
-api.add_resource(ClearSession, '/clear')
-api.add_resource(IndexArticle, '/articles')
-api.add_resource(ShowArticle, '/articles/<int:id>')
-
-# ----------------------------
-# Run app
-# ----------------------------
-if __name__ == '__main__':
-    app.run(port=5555, debug=True)
 class CheckSession(Resource):
     def get(self):
         user_id = session.get("user_id")
@@ -90,3 +56,52 @@ class CheckSession(Resource):
         if user:
             return user.to_dict(), 200
         return {}, 401
+
+# ----------------------------
+# Resource: Clear Session (used in tests)
+# ----------------------------
+class ClearSession(Resource):
+    def delete(self):
+        session['page_views'] = None
+        session['user_id'] = None
+        return {}, 204
+
+# ----------------------------
+# Resource: List Articles
+# ----------------------------
+class IndexArticle(Resource):
+    def get(self):
+        articles = [article.to_dict() for article in Article.query.all()]
+        return articles, 200
+
+# ----------------------------
+# Resource: Show Article (with session-based view limit)
+# ----------------------------
+class ShowArticle(Resource):
+    def get(self, id):
+        session['page_views'] = 0 if not session.get('page_views') else session.get('page_views')
+        session['page_views'] += 1
+
+        if session['page_views'] <= 3:
+            article = Article.query.filter(Article.id == id).first()
+            if article:
+                return make_response(jsonify(article.to_dict()), 200)
+            return {"error": "Article not found"}, 404
+
+        return {'message': 'Maximum pageview limit reached'}, 401
+
+# ----------------------------
+# Register API endpoints
+# ----------------------------
+api.add_resource(Login, '/login')
+api.add_resource(Logout, '/logout')
+api.add_resource(CheckSession, '/check_session')
+api.add_resource(ClearSession, '/clear')
+api.add_resource(IndexArticle, '/articles')
+api.add_resource(ShowArticle, '/articles/<int:id>')
+
+# ----------------------------
+# Run the app
+# ----------------------------
+if __name__ == '__main__':
+    app.run(port=5555, debug=True)
